@@ -90,17 +90,13 @@ No repositório **final**, todo trecho de código de cada exercício tem um come
 // EX02 - Adicionando filters - Aqui é a classe do filter
 ```
 
-Para achar tudo de um exercício, pesquise por `EX02` (Ctrl+Shift+F no VS Code/Visual Studio) ou rode, na pasta do repo final:
-
-```bash
-git grep -n "EX02"
-```
+Para achar tudo de um exercício, abra o repositório final no VS Code e pesquise por `EX02` (Ctrl+Shift+F).
 
 | Exercício | Tema | Etapa da oficina |
 |-----------|------|------------------|
-| **EX01** | Criando as migrations | 8 · EF Core e Migrations |
-| **EX02** | Adicionando filters (`TimingFilter`) | 2 · Program.cs e filters |
-| **EX03** | Implementando o Unit of Work | 5 · Repository e Unit of Work |
+| **EX01** | Criando as migrations | 2 · EF Core e Migrations |
+| **EX02** | Adicionando filters (`TimingFilter`) | 3 · Program.cs e filters |
+| **EX03** | Implementando o Unit of Work | 6 · Repository e Unit of Work |
 | **EX04** | Autenticação com JWT | 10 · JWT e autenticação |
 
 > Faça o **EX01 primeiro**: sem as tabelas no banco, nenhum endpoint que grava ou lê usuários funciona.
@@ -463,13 +459,13 @@ app.UseAuthorization();      // O QUE você pode fazer?
 |-----|-------|----------|
 | 10  | 0. História do .NET | slides |
 | 8   | 1. Introdução | `dotnet new`, `.csproj`, `docker compose up -d` |
-| 12  | 2. Program.cs, pipeline e filters | ler `Program.cs` · **EX02** |
-| 8   | 3. Controllers e rotas | ler `UsersController` |
-| 7   | 4. Verbos HTTP e status codes | chamar os endpoints pelo `.http`/Scalar |
-| 10  | 5. Repository e Unit of Work | `IUserRepository`/`UserRepository` · **EX03** |
-| 8   | 6. DTOs e model binding | `Dtos/` |
-| 8   | 7. Services e injeção de dependência | `UserService` e os `AddScoped` |
-| 12  | 8. EF Core e migrations | `Data/` · **EX01** |
+| 12  | 2. EF Core e migrations | `Data/` · **EX01** |
+| 12  | 3. Program.cs, pipeline e filters | ler `Program.cs` · **EX02** |
+| 8   | 4. Controllers e rotas | ler `UsersController` |
+| 7   | 5. Verbos HTTP e status codes | chamar os endpoints pelo `.http`/Scalar |
+| 10  | 6. Repository e Unit of Work | `IUserRepository`/`UserRepository` · **EX03** |
+| 8   | 7. DTOs e model binding | `Dtos/` |
+| 8   | 8. Services e injeção de dependência | `UserService` e os `AddScoped` |
 | 9   | 9. Validação e `DomainExceptionHandler` | provocar 400, 404 e 409 |
 | 13  | 10. JWT e autenticação | **EX04** |
 | 15  | Opcional: Orion API | CQRS e MediatR |
