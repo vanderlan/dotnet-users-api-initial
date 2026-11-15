@@ -1,0 +1,37 @@
+@host = http://localhost:5042
+
+### 1. Listar usuários (paginado + filtro por nome)
+GET {{host}}/api/users?page=1&quantity=10&query=
+
+### 2. Criar usuário  -> 201 Created + Location
+POST {{host}}/api/users
+Content-Type: application/json
+
+{
+  "name": "Maria Silva",
+  "email": "maria@exemplo.com",
+  "password": "Senha@123",
+  "profile": "Operator"
+}
+
+### 3. Buscar por id  (troque pelo id retornado no passo 2)
+GET {{host}}/api/users/00000000-0000-0000-0000-000000000000
+
+### 4. Atualizar  -> 204 No Content
+PUT {{host}}/api/users/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "name": "Maria S. Souza",
+  "email": "maria@exemplo.com",
+  "profile": "Admin"
+}
+
+### 5. Remover  -> 204 No Content
+DELETE {{host}}/api/users/00000000-0000-0000-0000-000000000000
+
+### 6. Erro de validação -> 400 (ValidationProblemDetails)
+POST {{host}}/api/users
+Content-Type: application/json
+
+{ "name": "", "email": "invalido", "password": "123", "profile": "Admin" }
