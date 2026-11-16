@@ -109,8 +109,21 @@ Para achar tudo de um exercício, abra o repositório final no VS Code e pesquis
 
 **Como ler os trechos de código**
 
-- Arquivo novo: o bloco traz o arquivo inteiro.
-- Arquivo existente: o bloco `diff` mostra só o que muda. Linhas com `-` saem, linhas com `+` entram e as linhas sem sinal são o contexto, para você achar o lugar. Cada `@@` separa um trecho do outro.
+- **Arquivo novo:** o bloco traz o arquivo inteiro. É só criar o arquivo e colar.
+- **Arquivo existente:** o bloco mostra algumas linhas que já existem (o contexto, para você achar o lugar) e, entre `// Novo` e `// Fim`, o código que você adiciona. Copie **apenas o que está entre os marcadores**, sem as linhas `// Novo` e `// Fim`, e cole no lugar indicado:
+
+  ```csharp
+  var anterior = Existente();        // já existe
+
+  // Novo
+  var novo = Adicionar();            // copie só isto
+  // Fim
+
+  var depois = Existente();          // já existe
+  ```
+
+- **Código a remover:** o que estiver entre `// Remover` e `// Fim` é apagado do arquivo (normalmente vem logo antes de um `// Novo` que o substitui).
+- **`// ...`** significa que existem outras linhas entre dois trechos: ignore e siga para o próximo.
 - Os caminhos são relativos a `src/UsersApi` (por exemplo, `Program.cs` é `src/UsersApi/Program.cs`).
 - Cada exercício começa com o **resumo das etapas**, na ordem em que você as faz. Os títulos abaixo repetem o resumo.
 
@@ -176,23 +189,27 @@ Objetivo: `GET /api/users?profile=Admin` devolve só os administradores (e `?pro
 
 Em `Dtos/UserDtos.cs`, o filtro ganha o parâmetro `Profile`:
 
-```diff
-     public string? Query { get; init; }
-+    public UserProfile? Profile { get; init; }
- }
+```csharp
+    public string? Query { get; init; }
+// Novo
+    public UserProfile? Profile { get; init; }
+// Fim
+}
 ```
 
 ### Etapa 2 · Aplicar o filtro na cláusula Where do repository
 
 Em `Repositories/UserRepository.cs`, no `ListPagedAsync`, logo depois do filtro por nome:
 
-```diff
-             query = query.Where(x => EF.Functions.ILike(x.Name, $"%{filter.Query}%"));
- 
-+        if (filter.Profile is not null)
-+            query = query.Where(x => x.Profile == filter.Profile.Value);
-+
-         var count = await query.CountAsync(cancellationToken);
+```csharp
+            query = query.Where(x => EF.Functions.ILike(x.Name, $"%{filter.Query}%"));
+
+// Novo
+        if (filter.Profile is not null)
+            query = query.Where(x => x.Profile == filter.Profile.Value);
+// Fim
+
+        var count = await query.CountAsync(cancellationToken);
 ```
 
 O controller **não muda**: o `[FromQuery] UserFilter filter` já recebe o `?profile=` (o *model binding* converte o texto `Admin` no enum `UserProfile`).
@@ -253,14 +270,18 @@ public class TimingFilter(ILogger<TimingFilter> logger) : IAsyncActionFilter
 
 Em `Program.cs`, registre o filter junto do outro:
 
-```diff
- builder.Services.AddControllers(options =>
--        options.Filters.Add<AutoValidationActionFilter>())
-+    {
-+        options.Filters.Add<AutoValidationActionFilter>();
-+        options.Filters.Add<TimingFilter>();
-+    })
-     // Enums trafegam como texto ("Admin") em vez de número.
+```csharp
+builder.Services.AddControllers(options =>
+// Remover
+        options.Filters.Add<AutoValidationActionFilter>())
+// Fim
+// Novo
+    {
+        options.Filters.Add<AutoValidationActionFilter>();
+        options.Filters.Add<TimingFilter>();
+    })
+// Fim
+    // Enums trafegam como texto ("Admin") em vez de número.
 ```
 
 ### Como testar
@@ -286,85 +307,111 @@ Objetivo: guardar o telefone (opcional) do usuário. O banco evolui com uma **no
 
 Em `Domain/Entities/User.cs`, o novo campo (o `?` permite `null`):
 
-```diff
-     public required UserProfile Profile { get; set; }
- 
-+    public string? Phone { get; set; }
-+
-     /// <summary>Hash da senha (PBKDF2). Nunca a senha em texto puro.</summary>
+```csharp
+    public required UserProfile Profile { get; set; }
+
+// Novo
+    public string? Phone { get; set; }
+// Fim
+
+    /// <summary>Hash da senha (PBKDF2). Nunca a senha em texto puro.</summary>
 ```
 
 ### Etapa 2 · Mapear a coluna
 
 Em `Data/Mappings/UserMapping.cs`, a coluna (tamanho máximo 20, opcional):
 
-```diff
-         builder.Property(x => x.PasswordHash).HasMaxLength(300).IsRequired();
-+        builder.Property(x => x.Phone).HasMaxLength(20);
+```csharp
+        builder.Property(x => x.PasswordHash).HasMaxLength(300).IsRequired();
+// Novo
+        builder.Property(x => x.Phone).HasMaxLength(20);
+// Fim
 ```
 
 ### Etapa 3 · Adicionar o campo nos DTOs
 
 Em `Dtos/UserDtos.cs`, o campo entra nos DTOs de criar, atualizar e na resposta:
 
-```diff
--public record CreateUserRequest(string Name, string Email, string Password, UserProfile Profile);
-+public record CreateUserRequest(
-+    string Name, string Email, string Password, UserProfile Profile, string? Phone = null);
- 
--public record UpdateUserRequest(string Name, string Email, UserProfile Profile);
-+public record UpdateUserRequest(
-+    string Name, string Email, UserProfile Profile, string? Phone = null);
-@@
-     string Email,
-+    string? Phone,
-     UserProfile Profile,
-     DateTime CreatedAt,
-     DateTime LastUpdated)
- {
-     public static UserResponse From(User user) =>
--        new(user.PublicId, user.Name, user.Email, user.Profile, user.CreatedAt, user.LastUpdated);
-+        new(user.PublicId, user.Name, user.Email, user.Phone,
-+            user.Profile, user.CreatedAt, user.LastUpdated);
- }
+```csharp
+// Remover
+public record CreateUserRequest(string Name, string Email, string Password, UserProfile Profile);
+// Fim
+// Novo
+public record CreateUserRequest(
+    string Name, string Email, string Password, UserProfile Profile, string? Phone = null);
+// Fim
+
+// Remover
+public record UpdateUserRequest(string Name, string Email, UserProfile Profile);
+// Fim
+// Novo
+public record UpdateUserRequest(
+    string Name, string Email, UserProfile Profile, string? Phone = null);
+// Fim
+// ...
+    string Email,
+// Novo
+    string? Phone,
+// Fim
+    UserProfile Profile,
+    DateTime CreatedAt,
+    DateTime LastUpdated)
+{
+    public static UserResponse From(User user) =>
+// Remover
+        new(user.PublicId, user.Name, user.Email, user.Profile, user.CreatedAt, user.LastUpdated);
+// Fim
+// Novo
+        new(user.PublicId, user.Name, user.Email, user.Phone,
+            user.Profile, user.CreatedAt, user.LastUpdated);
+// Fim
+}
 ```
 
 ### Etapa 4 · Gravar o telefone no service
 
 Em `Services/UserService.cs`, grave o telefone ao criar e ao atualizar:
 
-```diff
-             Profile = request.Profile,
-+            Phone = request.Phone?.Trim(),
-             PasswordHash = passwordHasher.Hash(request.Password)
-@@
-         user.Profile = request.Profile;
-+        user.Phone = request.Phone?.Trim();
+```csharp
+            Profile = request.Profile,
+// Novo
+            Phone = request.Phone?.Trim(),
+// Fim
+            PasswordHash = passwordHasher.Hash(request.Password)
+// ...
+        user.Profile = request.Profile;
+// Novo
+        user.Phone = request.Phone?.Trim();
+// Fim
 ```
 
 ### Etapa 5 · Validar o tamanho do telefone
 
 Em `Validators/Validators.cs`, valide o tamanho (a coluna aceita até 20 caracteres), no validator de criar e no de atualizar:
 
-```diff
-         RuleFor(x => x.Password).NotEmpty().WithMessage("A senha é obrigatória.")
-             .MinimumLength(6).WithMessage("A senha deve ter pelo menos 6 caracteres.");
- 
-         RuleFor(x => x.Profile).IsInEnum().WithMessage("Perfil inválido.");
-+
-+        RuleFor(x => x.Phone).MaximumLength(20)
-+            .WithMessage("O telefone deve ter no máximo 20 caracteres.");
-     }
- }
-@@
-             .MaximumLength(200);
- 
-         RuleFor(x => x.Profile).IsInEnum().WithMessage("Perfil inválido.");
-+
-+        RuleFor(x => x.Phone).MaximumLength(20)
-+            .WithMessage("O telefone deve ter no máximo 20 caracteres.");
-     }
- }
+```csharp
+        RuleFor(x => x.Password).NotEmpty().WithMessage("A senha é obrigatória.")
+            .MinimumLength(6).WithMessage("A senha deve ter pelo menos 6 caracteres.");
+
+        RuleFor(x => x.Profile).IsInEnum().WithMessage("Perfil inválido.");
+
+// Novo
+        RuleFor(x => x.Phone).MaximumLength(20)
+            .WithMessage("O telefone deve ter no máximo 20 caracteres.");
+// Fim
+    }
+}
+// ...
+            .MaximumLength(200);
+
+        RuleFor(x => x.Profile).IsInEnum().WithMessage("Perfil inválido.");
+
+// Novo
+        RuleFor(x => x.Phone).MaximumLength(20)
+            .WithMessage("O telefone deve ter no máximo 20 caracteres.");
+// Fim
+    }
+}
 ```
 
 ### Etapa 6 · Gerar e aplicar a segunda migration
@@ -431,14 +478,20 @@ dotnet add src/UsersApi package Microsoft.AspNetCore.Authentication.JwtBearer --
 
 Em `appsettings.Development.json`, adicione a seção (chave com 64+ caracteres; só para desenvolvimento):
 
-```diff
-+  "JwtOptions": {
-+    "SymmetricSecurityKey": "SOMENTE-PARA-DESENVOLVIMENTO-troque-em-producao-chave-com-pelo-menos-64-caracteres!!",
-+    "Issuer": "UsersApi",
-+    "Audience": "UsersApi.Clients",
-+    "TokenExpirationMinutes": 60
-+  },
-   "ConnectionStrings": {
+```jsonc
+    }
+  },
+
+// Novo
+  "JwtOptions": {
+    "SymmetricSecurityKey": "SOMENTE-PARA-DESENVOLVIMENTO-troque-em-producao-chave-com-pelo-menos-64-caracteres!!",
+    "Issuer": "UsersApi",
+    "Audience": "UsersApi.Clients",
+    "TokenExpirationMinutes": 60
+  },
+// Fim
+
+  "ConnectionStrings": {
 ```
 
 ### Etapa 3 · Criar as opções do JWT
@@ -550,20 +603,26 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider c
 
 ### Etapa 6 · Criar a exceção de login inválido e mapeá-la para 401
 
-Em `Domain/Exceptions/BusinessException.cs`, adicione **ao final** do arquivo a exceção de login inválido:
+Em `Domain/Exceptions/BusinessException.cs`, a exceção de login inválido entra **ao final** do arquivo:
 
 ```csharp
+public class ConflictException(string message)
+    : BusinessException(message, "Conflito");
 
+// Novo
 public class UnauthorizedUserException(string message)
     : BusinessException(message, "Não autenticado");
+// Fim
 ```
 
 Em `ExceptionHandling/DomainExceptionHandler.cs`, o `switch` passa a devolver `401` para essa exceção:
 
-```diff
-             ConflictException => StatusCodes.Status409Conflict,
-+            UnauthorizedUserException => StatusCodes.Status401Unauthorized,
-             BusinessException => StatusCodes.Status400BadRequest,
+```csharp
+            ConflictException => StatusCodes.Status409Conflict,
+// Novo
+            UnauthorizedUserException => StatusCodes.Status401Unauthorized,
+// Fim
+            BusinessException => StatusCodes.Status400BadRequest,
 ```
 
 ### Etapa 7 · Criar o serviço de login
@@ -628,10 +687,15 @@ public class AuthController(IAuthService authService) : ControllerBase
 
 ### Etapa 9 · Criar o validator do login
 
-Em `Validators/Validators.cs`, adicione **ao final** do arquivo o validator do login:
+Em `Validators/Validators.cs`, o validator do login entra **ao final** do arquivo, depois do `UpdateUserRequestValidator`:
 
 ```csharp
+        RuleFor(x => x.Phone).MaximumLength(20)
+            .WithMessage("O telefone deve ter no máximo 20 caracteres.");
+    }
+}
 
+// Novo
 public class LoginRequestValidator : AbstractValidator<LoginRequest>
 {
     public LoginRequestValidator()
@@ -640,91 +704,121 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
         RuleFor(x => x.Password).NotEmpty().WithMessage("A senha é obrigatória.");
     }
 }
+// Fim
 ```
 
 ### Etapa 10 · Registrar serviços, opções e autenticação
 
 Em `Program.cs`, os `using` novos:
 
-```diff
- using FluentValidation;
-+using Microsoft.AspNetCore.Authentication.JwtBearer;
- using Microsoft.EntityFrameworkCore;
-+using Microsoft.Extensions.Options;
- using Scalar.AspNetCore;
-@@
- using UsersApi.Filters;
-+using UsersApi.Options;
- using UsersApi.Repositories;
+```csharp
+using FluentValidation;
+// Novo
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+// Fim
+using Microsoft.EntityFrameworkCore;
+// Novo
+using Microsoft.Extensions.Options;
+// Fim
+using Scalar.AspNetCore;
+// ...
+using UsersApi.Filters;
+// Novo
+using UsersApi.Options;
+// Fim
+using UsersApi.Repositories;
 ```
 
 Ainda em `Program.cs`, registre o login, o gerador de token, as opções do JWT e a autenticação:
 
-```diff
- builder.Services.AddScoped<IUserService, UserService>();
- builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
-+builder.Services.AddScoped<IAuthService, AuthService>();
-+builder.Services.AddSingleton<ITokenService, JwtTokenService>();
-+
-+builder.Services.AddOptions<JwtOptions>()
-+    .BindConfiguration(JwtOptions.SectionName)
-+    .ValidateDataAnnotations()
-+    .ValidateOnStart();
-+
-+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-+    .AddJwtBearer();
-+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-+    .Configure<IOptions<JwtOptions>>((bearer, jwt) =>
-+        bearer.TokenValidationParameters =
-+            JwtTokenService.CreateValidationParameters(jwt.Value));
-+builder.Services.AddAuthorization();
- 
- // Documentação: OpenAPI + Scalar
+```csharp
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+// Novo
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddSingleton<ITokenService, JwtTokenService>();
+
+builder.Services.AddOptions<JwtOptions>()
+    .BindConfiguration(JwtOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer();
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((bearer, jwt) =>
+        bearer.TokenValidationParameters =
+            JwtTokenService.CreateValidationParameters(jwt.Value));
+builder.Services.AddAuthorization();
+// Fim
+
+// Documentação: OpenAPI + Scalar
 ```
 
 ### Etapa 11 · Ligar autenticação e autorização no pipeline
 
 Em `Program.cs`, no pipeline, **antes** do `MapControllers`:
 
-```diff
-+app.UseAuthentication();     // QUEM é você?  (lê e valida o JWT)
-+app.UseAuthorization();      // O QUE você pode fazer?  ([Authorize])
-+
- app.MapControllers();
+```csharp
+    app.MapScalarApiReference();      // /scalar/v1
+}
+
+// Novo
+app.UseAuthentication();     // QUEM é você?  (lê e valida o JWT)
+app.UseAuthorization();      // O QUE você pode fazer?  ([Authorize])
+// Fim
+
+app.MapControllers();
 ```
 
 ### Etapa 12 · Proteger o UsersController
 
 Em `Controllers/UsersController.cs`, os `using` novos e o `[Authorize]` na classe:
 
-```diff
-+using Microsoft.AspNetCore.Authorization;
- using Microsoft.AspNetCore.Mvc;
-+using UsersApi.Domain.Entities;
- using UsersApi.Dtos;
-@@
- [Route("api/[controller]")]
-+[Authorize]
- public class UsersController(IUserService userService) : ControllerBase
+```csharp
+// Novo
+using Microsoft.AspNetCore.Authorization;
+// Fim
+using Microsoft.AspNetCore.Mvc;
+// Novo
+using UsersApi.Domain.Entities;
+// Fim
+using UsersApi.Dtos;
+// ...
+[Route("api/[controller]")]
+// Novo
+[Authorize]
+// Fim
+public class UsersController(IUserService userService) : ControllerBase
 ```
 
 Ainda em `Controllers/UsersController.cs`, exija o perfil **Admin** nas ações de listar, buscar, atualizar e remover, e libere o cadastro (assim dá para criar o primeiro usuário):
 
-```diff
-     [HttpGet]
-+    [Authorize(Roles = nameof(UserProfile.Admin))]
-@@
-     [HttpGet("{id}")]
-+    [Authorize(Roles = nameof(UserProfile.Admin))]
-@@
-     [HttpPost]
-+    [AllowAnonymous]
-@@
-     [HttpPut("{id}")]
-+    [Authorize(Roles = nameof(UserProfile.Admin))]
-@@
-     [HttpDelete("{id}")]
-+    [Authorize(Roles = nameof(UserProfile.Admin))]
+```csharp
+    [HttpGet]
+// Novo
+    [Authorize(Roles = nameof(UserProfile.Admin))]
+// Fim
+// ...
+    [HttpGet("{id}")]
+// Novo
+    [Authorize(Roles = nameof(UserProfile.Admin))]
+// Fim
+// ...
+    [HttpPost]
+// Novo
+    [AllowAnonymous]
+// Fim
+// ...
+    [HttpPut("{id}")]
+// Novo
+    [Authorize(Roles = nameof(UserProfile.Admin))]
+// Fim
+// ...
+    [HttpDelete("{id}")]
+// Novo
+    [Authorize(Roles = nameof(UserProfile.Admin))]
+// Fim
 ```
 
 ### Como testar
@@ -778,31 +872,35 @@ Objetivo: o usuário logado consulta os próprios dados, sem informar id. O id v
 
 Em `Controllers/UsersController.cs`, o `using` novo:
 
-```diff
-+using System.Security.Claims;
- using Microsoft.AspNetCore.Authorization;
+```csharp
+// Novo
+using System.Security.Claims;
+// Fim
+using Microsoft.AspNetCore.Authorization;
 ```
 
 ### Etapa 2 · Criar a action GetMe
 
 Ainda em `Controllers/UsersController.cs`, a nova action, logo depois do `GetById`. Ela **não** tem `Roles`: qualquer perfil logado pode chamar.
 
-```diff
-         return Ok(await userService.GetByIdAsync(id, cancellationToken));
-     }
- 
-+    /// <summary>Devolve os dados do usuário autenticado (o id vem da claim do token).</summary>
-+    [HttpGet("me")]
-+    [ProducesResponseType<UserResponse>(StatusCodes.Status200OK)]
-+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-+    public async Task<ActionResult<UserResponse>> GetMe(CancellationToken cancellationToken)
-+    {
-+        var id = User.FindFirstValue(ClaimTypes.Sid)!;
-+
-+        return Ok(await userService.GetByIdAsync(id, cancellationToken));
-+    }
-+
-     /// <summary>Cria um usuário.</summary>
+```csharp
+        return Ok(await userService.GetByIdAsync(id, cancellationToken));
+    }
+
+// Novo
+    /// <summary>Devolve os dados do usuário autenticado (o id vem da claim do token).</summary>
+    [HttpGet("me")]
+    [ProducesResponseType<UserResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserResponse>> GetMe(CancellationToken cancellationToken)
+    {
+        var id = User.FindFirstValue(ClaimTypes.Sid)!;
+
+        return Ok(await userService.GetByIdAsync(id, cancellationToken));
+    }
+// Fim
+
+    /// <summary>Cria um usuário.</summary>
 ```
 
 ### Como testar
@@ -842,7 +940,7 @@ Authorization: Bearer {{tokenOperator}}
 | 12  | 6. Pipeline e filters | `Program.cs` · **EX03** |
 | 16  | 7. Validação e `DomainExceptionHandler` | provocar 400, 404 e 409 · **EX04** |
 | 18  | 8. JWT e autenticação | **EX05** · **EX06** |
-|     | Opcional: Orion API | CQRS e MediatR, só se sobrar tempo |
+|     | Bônus: Orion API | CQRS e MediatR |
 
 ## Desafios para depois da oficina
 
