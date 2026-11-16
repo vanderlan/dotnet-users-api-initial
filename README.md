@@ -206,11 +206,11 @@ Reinicie a API, crie um usuário `Admin` e outro `Operator` (a requisição **Cr
 GET {{host}}/api/users?profile=Admin
 
 ### Perfil inexistente -> 400
-GET {{host}}/api/users?profile=Chefe
+GET {{host}}/api/users?profile=Master
 ```
 
 - `?profile=Admin` devolve só Admins e `?profile=Operator`, só Operators.
-- `?profile=Chefe` responde `400`: o model binding recusa o valor antes de chegar ao controller.
+- `?profile=Master` responde `400`: o model binding recusa o valor antes de chegar ao controller.
 - No terminal, o log mostra o SQL gerado pelo EF Core com o filtro.
 
 ---
