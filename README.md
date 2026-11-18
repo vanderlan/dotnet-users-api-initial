@@ -1,6 +1,6 @@
 # dotnet-users-api-initial
 
-Ponto de partida da oficina **C# e .NET na prática** (Tech Week · Facisa): uma API de usuários em **.NET 10 + PostgreSQL**,
+Ponto de partida da oficina **C# e .NET na prática** (Tech Week · Facisa): uma API de usuários em **.NET 10 + SQLite**,
 versão enxuta do [Orion API](https://github.com/vanderlan/Orion-Api).
 
 O projeto **sobe e responde**, mas ainda não tem **migrations**, **autenticação (JWT)** nem as evoluções pequenas
@@ -11,8 +11,8 @@ O projeto **sobe e responde**, mas ainda não tem **migrations**, **autenticaç�
 ## Pré-requisitos
 
 - [.NET SDK 10](https://dotnet.microsoft.com/download) (`dotnet --version` → `10.x`)
-- Docker + Docker Compose
 - Um editor: VS Code (extensão C# Dev Kit), Visual Studio ou Rider
+- (Opcional) uma ferramenta para abrir o banco, como o [DB Browser for SQLite](https://sqlitebrowser.org/) ou uma extensão de SQLite do VS Code
 
 ## Instalando a ferramenta de migrations (dotnet-ef)
 
@@ -38,16 +38,13 @@ dotnet ef --version
 git clone https://github.com/vanderlan/dotnet-users-api-initial.git
 cd dotnet-users-api-initial
 
-# 1. sobe PostgreSQL (5432) e pgAdmin (5050)
-docker compose up -d
-
-# 2. roda a API (abre o Scalar no navegador)
+# roda a API (abre o Scalar no navegador)
 dotnet run --project src/UsersApi --launch-profile Dev
 ```
 
 - API: http://localhost:5042
 - Documentação interativa (Scalar): http://localhost:5042/scalar/v1
-- pgAdmin: http://localhost:5050 (servidor **Users DB** já cadastrado; senha do banco: `postgres`)
+- Banco: o arquivo SQLite `src/UsersApi/usersdb.db` (criado pelas migrations no EX01; não precisa instalar nem subir nenhum servidor)
 - Requisições prontas: [`src/UsersApi/UsersApi.http`](src/UsersApi/UsersApi.http)
 
 > Enquanto a migration não existir (**EX01**), os endpoints que tocam o banco respondem `500`. É esperado.
@@ -81,7 +78,7 @@ src/UsersApi
 └── Program.cs          # serviços (DI) + pipeline HTTP
 ```
 
-Fluxo de uma requisição: `Controller → Service → Repository → AppDbContext → PostgreSQL`.
+Fluxo de uma requisição: `Controller → Service → Repository → AppDbContext → SQLite`.
 
 ---
 
@@ -97,7 +94,7 @@ Para achar tudo de um exercício, abra o repositório final no VS Code e pesquis
 
 | Exercício | Tema | Etapas | Etapa da oficina |
 |-----------|------|--------|------------------|
-| **EX01** | Criando as migrations | 4 | 2 · EF Core: migrations e consultas |
+| **EX01** | Criando as migrations | 3 | 2 · EF Core: migrations e consultas |
 | **EX02** | Filtro por perfil na listagem | 2 | 2 · EF Core: migrations e consultas |
 | **EX03** | Adicionando filters (`TimingFilter`) | 2 | 6 · Pipeline e filters |
 | **EX04** | Novo campo no usuário (segunda migration) | 6 | 7 · Validação e erros |
@@ -131,22 +128,15 @@ Para achar tudo de um exercício, abra o repositório final no VS Code e pesquis
 
 ## EX01 · Criando as migrations
 
-Gera o esquema do banco a partir do modelo C# (`User` + `UserMapping`) e o aplica no PostgreSQL.
+Gera o esquema do banco a partir do modelo C# (`User` + `UserMapping`) e o aplica no SQLite. O banco é só um arquivo (`usersdb.db`): o `database update` cria o arquivo e as tabelas.
 
-**Resumo (4 etapas)**
+**Resumo (3 etapas)**
 
-* 1 - Subir o banco
-* 2 - Compilar o projeto uma vez
-* 3 - Gerar a migration
-* 4 - Aplicar a migration no banco
+* 1 - Compilar o projeto uma vez
+* 2 - Gerar a migration
+* 3 - Aplicar a migration no banco
 
-### Etapa 1 · Subir o banco
-
-```bash
-docker compose up -d
-```
-
-### Etapa 2 · Compilar o projeto uma vez
+### Etapa 1 · Compilar o projeto uma vez
 
 Isso restaura os pacotes de que o `dotnet ef` precisa (se você já rodou a API, já está feito):
 
@@ -154,7 +144,7 @@ Isso restaura os pacotes de que o `dotnet ef` precisa (se você já rodou a API,
 dotnet build
 ```
 
-### Etapa 3 · Gerar a migration
+### Etapa 2 · Gerar a migration
 
 ```bash
 dotnet ef migrations add InitialCreate --project src/UsersApi --output-dir Data/Migrations
@@ -162,7 +152,7 @@ dotnet ef migrations add InitialCreate --project src/UsersApi --output-dir Data/
 
 Abra `Data/Migrations/..._InitialCreate.cs` e veja os métodos `Up` (cria) e `Down` (desfaz).
 
-### Etapa 4 · Aplicar a migration no banco
+### Etapa 3 · Aplicar a migration no banco
 
 ```bash
 dotnet ef database update --project src/UsersApi
@@ -170,9 +160,9 @@ dotnet ef database update --project src/UsersApi
 
 ### Como testar
 
-No pgAdmin (http://localhost:5050) confira as tabelas `Users` e `__EFMigrationsHistory`. No `UsersApi.http`, a requisição **Criar usuário** agora responde `201`.
+Confira que o arquivo `src/UsersApi/usersdb.db` foi criado e, no DB Browser for SQLite (ou na extensão do VS Code), abra-o e veja as tabelas `Users` e `__EFMigrationsHistory`. No `UsersApi.http`, a requisição **Criar usuário** agora responde `201`.
 
-Para recomeçar do zero: `docker compose down -v` (apaga o banco) e apague a pasta `Data/Migrations`.
+Para recomeçar do zero: pare a API, apague o arquivo `src/UsersApi/usersdb.db` (e, se existirem, `usersdb.db-shm` e `usersdb.db-wal`) e a pasta `Data/Migrations`.
 
 ---
 
@@ -202,7 +192,7 @@ Em `Dtos/UserDtos.cs`, o filtro ganha o parâmetro `Profile`:
 Em `Repositories/UserRepository.cs`, no `ListPagedAsync`, logo depois do filtro por nome:
 
 ```csharp
-            query = query.Where(x => EF.Functions.ILike(x.Name, $"%{filter.Query}%"));
+            query = query.Where(x => EF.Functions.Like(x.Name, $"%{filter.Query}%"));
 
 // Novo
         if (filter.Profile is not null)
@@ -423,7 +413,7 @@ dotnet ef migrations add AddUserPhone --project src/UsersApi --output-dir Data/M
 dotnet ef database update --project src/UsersApi
 ```
 
-Abra a nova migration: o `Up` faz um `AddColumn` e o `Down`, um `DropColumn`. No pgAdmin, a tabela `Users` ganhou a coluna `Phone` e os usuários que já existiam continuam lá (com `Phone` vazio).
+Abra a nova migration: o `Up` faz um `AddColumn` e o `Down`, um `DropColumn`. No banco (DB Browser for SQLite), a tabela `Users` ganhou a coluna `Phone` e os usuários que já existiam continuam lá (com `Phone` vazio).
 
 ### Como testar
 
@@ -932,7 +922,7 @@ Authorization: Bearer {{tokenOperator}}
 | Min | Etapa | Conteúdo |
 |-----|-------|----------|
 | 10  | 0. História do .NET | slides |
-| 8   | 1. Introdução | `dotnet new`, `.csproj`, `docker compose up -d` |
+| 8   | 1. Introdução | `dotnet new`, `.csproj`, `dotnet run` |
 | 17  | 2. EF Core: migrations e consultas | `Data/` · **EX01** · **EX02** |
 | 15  | 3. Controllers, rotas, verbos e status codes | ler `UsersController`, chamar os endpoints pelo `.http`/Scalar |
 | 8   | 4. DTOs e model binding | `Dtos/` |

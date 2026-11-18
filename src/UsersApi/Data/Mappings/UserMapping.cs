@@ -17,7 +17,7 @@ public class UserMapping : IEntityTypeConfiguration<User>
         builder.Property(x => x.Email).HasMaxLength(200).IsRequired();
         builder.Property(x => x.PasswordHash).HasMaxLength(300).IsRequired();
 
-        // Enum gravado como texto ("Admin") para ficar legível no pgAdmin.
+        // Enum gravado como texto ("Admin") para ficar legível ao abrir o banco.
         builder.Property(x => x.Profile).HasConversion<string>().HasMaxLength(20).IsRequired();
 
         builder.HasIndex(x => x.PublicId).IsUnique();

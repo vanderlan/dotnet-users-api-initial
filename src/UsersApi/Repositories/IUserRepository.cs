@@ -5,7 +5,7 @@ namespace UsersApi.Repositories;
 
 /// <summary>
 /// Repository: esconde o acesso a dados atrás de uma interface.
-/// O service pede "um usuário por e-mail" e não sabe se por trás há PostgreSQL, SQL Server ou outro banco.
+/// O service pede "um usuário por e-mail" e não sabe se por trás há SQLite, PostgreSQL, SQL Server ou outro banco.
 /// </summary>
 public interface IUserRepository
 {

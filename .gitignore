@@ -4,3 +4,8 @@ obj/
 .idea/
 *.user
 appsettings.Production.json
+
+# Banco SQLite local (gerado pela API)
+*.db
+*.db-shm
+*.db-wal
